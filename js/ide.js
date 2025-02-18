@@ -12,6 +12,21 @@ function setOpenRouterApiKey(key) {
     localStorage.setItem('OPENROUTER_API_KEY', key);
 }
 
+let SELECTED_MODEL = localStorage.getItem('SELECTED_MODEL') || 'meta-llama/llama3.2-3b-instruct:free';
+
+const AVAILABLE_MODELS = [
+    {id: 'meta-llama/llama3.2-3b-instruct:free', name:'llama 3.2 3B (Free)'},
+    {id: 'deepseek/deepseek-r1-distill-llama-70b:free', name:'DeepSeek: R1 Distill Llama 70B (free)'},
+    {id: 'google/gemini-2.0-flash-thinking-exp:free', name:'Google: Gemini 2.0 Flash Thinking (free)'},
+    {id: 'deepseek/deepseek-chat:free', name:'DeepSeek: DeepSeek V3'}
+];
+
+// Update selected LLM
+function setSelectedModel(modelID) {
+    SELECTED_MODEL = modelID;
+    localStorage.setItem('SELECTED_MODEL', modelID);
+}
+
 const CE = "CE";
 const EXTRA_CE = "EXTRA_CE";
 
@@ -629,6 +644,20 @@ $(document).ready(async function () {
                             Save Key
                         </button>
                     </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <select
+                            id="model-selector" 
+                            class="flex-1 bg-[#1e1e1e] text-[#cccccc] text-sm rounded border border-[#3e3e42] px-2 py-1 focus:outline-none focus:border-[#0078d4]"
+                        >
+                            ${AVAILABLE_MODELS.map(model => `
+                                <option value="${model.id}" ${model.id === SELECTED_MODEL ? 'selected' : ''}>
+                                    ${model.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+
                     <p class="chat-description text-sm text-[#8a8a8a]">
                     Ask questions about your code or get help with programming
                     </p>
@@ -646,6 +675,7 @@ $(document).ready(async function () {
                 </div>
             </div>
             `
+            chatContainer.style.height = '100%';
 
             const messagesEl = chatContainer.querySelector(".messages")
             const inputEl = chatContainer.querySelector("textarea")
@@ -666,9 +696,55 @@ $(document).ready(async function () {
                     hour12: true
                 })
             }
+            
+            // Escape HTML to prevent injection in code blocks.
+            function escapeHtml(unsafe) {
+                return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+            }
+
+            // Basic markdown-to-HTML conversion function.
+            function markdownToHtml(markdown) {
+                let html = markdown;
+            
+                // Convert code blocks (``` code ```)
+                html = html.replace(/```([\s\S]*?)```/g, function(match, p1) {
+                return `<pre><code>${escapeHtml(p1)}</code></pre>`;
+                });
+            
+                // Convert headers (e.g., "# Header")
+                html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>');
+                html = html.replace(/^##### (.*)$/gm, '<h5>$1</h5>');
+                html = html.replace(/^#### (.*)$/gm, '<h4>$1</h4>');
+                html = html.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+                html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+                html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+            
+                // Convert bold text ( **text** )
+                html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+                // Convert italic text ( *text* )
+                html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+                // Convert inline code ( `code` )
+                html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+                // Convert links [text](url)
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+            
+                // Convert new lines to <br> tags
+                html = html.replace(/\n/g, '<br>');
+            
+                return html;
+            }
 
             function addUserMessage(message) {
-                console.log(message);
+                // console.log(message);
+
                 const messageHTML = `
                     <div class="message-wrapper user-message-wrapper flex justify-end">
                         <div class="message user-message bg-[#0078d4] text-[#ffffff] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]">
@@ -678,20 +754,31 @@ $(document).ready(async function () {
                     </div>
                 `
                 messagesEl.insertAdjacentHTML('beforeend', messageHTML)
-                messagesEl.scrollTop = messagesEl.scrollHeight
+                // Give the browser a short delay to render before scrolling
+                setTimeout(() => {
+                    messagesEl.scrollTop = messagesEl.scrollHeight
+                }, 50)
+                
             }
             
             function addAssistantMessage(message){
+
+                // Convert the markdown (or plain text) response to HTML.
+                const parsedMessage = markdownToHtml(message);
                 const messageHTML = `
                     <div class="message-wrapper assistant-message-wrapper flex justify-start">
                         <div class="message assistant-message bg-[#252526] text-[#cccccc] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]">
-                            <div class="message-content">${message}</div>
+                            <div class="message-content">${parsedMessage}</div>
                             <div class="message-timestamp text-xs text-[#8a8a8a] mt-1">${formatTimeStamp()}</div>
                         </div>
                     </div>
                 `
                 messagesEl.insertAdjacentHTML('beforeend', messageHTML)
-                messagesEl.scrollTop = messagesEl.scrollHeight
+                // Give the browser a short delay to render before scrolling
+                setTimeout(() => {
+                    messagesEl.scrollTop = messagesEl.scrollHeight
+                }, 50)
+                
             }
 
             function addTypingIndicator() {
@@ -707,7 +794,11 @@ $(document).ready(async function () {
                     </div>
                 `
                 messagesEl.insertAdjacentHTML('beforeend', indicatorHTML)
-                messagesEl.scrollTop = messagesEl.scrollHeight
+                // Give the browser a short delay to render before scrolling
+                setTimeout(()=> {
+                    messagesEl.scrollTop = messagesEl.scrollHeight
+                }, 0)
+                
             }
 
             function removeTypingIndicator() {
@@ -729,19 +820,8 @@ $(document).ready(async function () {
                 addUserMessage(message)
                 addTypingIndicator()
 
-                // try{
-                //     // Simulating an API call 
-                //     setTimeout(() => {
-                //         removeTypingIndicator()
-                //         addAssistantMessage("This is a sample response. The actual integration with LLMs is coming soon.")
-                //     }, 1000)
-                // } catch (error){
-                //     removeTypingIndicator()
-                //     addAssistantMessage("An error was encountered while processing your request. Refresh the page or try again later!")
-                // }
-
                 try {
-
+                    // Calling API and fetching response
                     const codeContext = {
                         source_code: sourceEditor.getValue(),
                         language: $selectLanguage.find(":selected").text(),
@@ -749,16 +829,46 @@ $(document).ready(async function () {
                         stdout: stdoutEditor.getValue(),
                     }
                     
+                    // const systemContent = `
+                    // You are an expert programmer. You have access to the following code context:
+                    // Language: ${codeContext.language}
+                    // Source Code:
+                    // \`\`\`
+                    // ${codeContext.source_code}
+                    // \`\`\`
+                    // ${codeContext.stdin ? `Input:\n${codeContext.stdin}\n` : ''}
+                    // ${codeContext.stdout ? `Output:\n${codeContext.stdout}\n` : ''}
+                    // Analyze the information carefully, step by step. Provide clear, concise and accurate responses about the code.
+                    // If suggesting code changes, explain the reasoning and ensure they follow best practices.
+                    // `.trim();
+
+                    // const userContent = `
+                    // Here is the user's message:
+                    // <user_message>
+                    // ${message}
+                    // </user_message>
+                    // Provide a detailed and accurate response to the user's message based on the code context.
+                    // If suggesting code changes, explain the reasoning and ensure they follow best practices.
+                    //         `.trim();
+
+                    // const payload = {
+                    //     model: SELECTED_MODEL,
+                    //     messages: [
+                    //         {role: 'system', content: systemContent },
+                    //         { role: 'user', content: userContent }
+                    //     ]
+                    // };
+                    
+                    // console.log("Sending payload: ", payload);
+
                     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer  ${OPENROUTER_API_KEY}`,
-                            'HTTP-Referer': window.location.origin,
-                            'X-Title': 'Judge0-ide'
+                            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                         },
                         body: JSON.stringify({
-                            model: 'meta-llama/llama-3.2-3b-instruct:free',
+                            model: SELECTED_MODEL,
                             messages: [
                                 {
                                     role: 'system',
@@ -793,6 +903,7 @@ $(document).ready(async function () {
                     if (!response.ok) {
                         throw new Error(`API request failed: ${response.statusText}`)
                     }
+                    
                     const data = await response.json()
                     const assistantMessage = data.choices[0].message.content
                     removeTypingIndicator()
@@ -819,6 +930,7 @@ $(document).ready(async function () {
             // API Key Handling code
             const apiKeyInput = chatContainer.querySelector("#openrouter-api-key")
             const saveKeyBtn = chatContainer.querySelector("#save-api-key")
+            const modelSelector = chatContainer.querySelector("#model-selector")
 
             saveKeyBtn.addEventListener("click", () => {
                 const newKey = apiKeyInput.value.trim()
@@ -826,6 +938,10 @@ $(document).ready(async function () {
                 addAssistantMessage("API key has been saved.")
             })
 
+            modelSelector.addEventListener("change", (e) => {
+                setSelectedModel(e.target.value)
+                addAssistantMessage(`Model changed to ${AVAILABLE_MODELS.find(m => m.id === e.target.value).name}`)
+            })
 
             container.getElement().append(chatContainer)
 
