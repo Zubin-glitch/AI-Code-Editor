@@ -7,6 +7,7 @@ const AUTH_HEADERS = API_KEY ? {
 // OpenRouter API Configuration
 let OPENROUTER_API_KEY = localStorage.getItem('OPENROUTER_API_KEY') || '';
 
+// Set OpenRouter API Key
 function setOpenRouterApiKey(key) {
     OPENROUTER_API_KEY = key;
     localStorage.setItem('OPENROUTER_API_KEY', key);
@@ -15,10 +16,10 @@ function setOpenRouterApiKey(key) {
 let SELECTED_MODEL = localStorage.getItem('SELECTED_MODEL') || 'meta-llama/llama3.2-3b-instruct:free';
 
 const AVAILABLE_MODELS = [
-    {id: 'meta-llama/llama3.2-3b-instruct:free', name:'llama 3.2 3B (Free)'},
-    {id: 'deepseek/deepseek-r1-distill-llama-70b:free', name:'DeepSeek: R1 Distill Llama 70B (free)'},
-    {id: 'google/gemini-2.0-flash-thinking-exp:free', name:'Google: Gemini 2.0 Flash Thinking (free)'},
-    {id: 'deepseek/deepseek-chat:free', name:'DeepSeek: DeepSeek V3'}
+    { id: 'meta-llama/llama3.2-3b-instruct:free', name:'llama 3.2 3B (free)' },
+    { id: 'deepseek/deepseek-r1-distill-llama-70b:free', name:'DeepSeek: R1 Distill Llama 70B (free)' },
+    { id: 'google/gemini-2.0-flash-thinking-exp:free', name:'Google: Gemini 2.0 Flash Thinking (free)' },
+    { id: 'deepseek/deepseek-chat:free', name:'DeepSeek: DeepSeek V3' }
 ];
 
 // Update selected LLM
@@ -644,7 +645,6 @@ $(document).ready(async function () {
                             Save Key
                         </button>
                     </div>
-                    
                     <div class="flex items-center gap-2">
                         <select
                             id="model-selector" 
@@ -657,7 +657,6 @@ $(document).ready(async function () {
                             `).join('')}
                         </select>
                     </div>
-
                     <p class="chat-description text-sm text-[#8a8a8a]">
                     Ask questions about your code or get help with programming
                     </p>
@@ -708,7 +707,7 @@ $(document).ready(async function () {
             }
 
             // Basic markdown-to-HTML conversion function.
-            function markdownToHtml(markdown) {
+            function markdownToHTML(markdown) {
                 let html = markdown;
             
                 // Convert code blocks (``` code ```)
@@ -764,7 +763,7 @@ $(document).ready(async function () {
             function addAssistantMessage(message){
 
                 // Convert the markdown (or plain text) response to HTML.
-                const parsedMessage = markdownToHtml(message);
+                const parsedMessage = markdownToHTML(message);
                 const messageHTML = `
                     <div class="message-wrapper assistant-message-wrapper flex justify-start">
                         <div class="message assistant-message bg-[#252526] text-[#cccccc] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]">
@@ -821,7 +820,8 @@ $(document).ready(async function () {
                 addTypingIndicator()
 
                 try {
-                    // Calling API and fetching response
+                    // API call to LLM and fetching response
+                    
                     const codeContext = {
                         source_code: sourceEditor.getValue(),
                         language: $selectLanguage.find(":selected").text(),
@@ -829,37 +829,37 @@ $(document).ready(async function () {
                         stdout: stdoutEditor.getValue(),
                     }
                     
-                    // const systemContent = `
-                    // You are an expert programmer. You have access to the following code context:
-                    // Language: ${codeContext.language}
-                    // Source Code:
-                    // \`\`\`
-                    // ${codeContext.source_code}
-                    // \`\`\`
-                    // ${codeContext.stdin ? `Input:\n${codeContext.stdin}\n` : ''}
-                    // ${codeContext.stdout ? `Output:\n${codeContext.stdout}\n` : ''}
-                    // Analyze the information carefully, step by step. Provide clear, concise and accurate responses about the code.
-                    // If suggesting code changes, explain the reasoning and ensure they follow best practices.
-                    // `.trim();
+                    const systemContent = `
+                    You are an expert programmer. You have access to the following code context:
+                    Language: ${codeContext.language}
+                    Source Code:
+                    \`\`\`
+                    ${codeContext.source_code}
+                    \`\`\`
+                    ${codeContext.stdin ? `Input:\n${codeContext.stdin}\n` : ''}
+                    ${codeContext.stdout ? `Output:\n${codeContext.stdout}\n` : ''}
+                    Analyze the information carefully, step by step. Provide clear, concise and accurate responses about the code.
+                    If suggesting code changes, explain the reasoning and ensure they follow best practices.
+                    `.trim();
 
-                    // const userContent = `
-                    // Here is the user's message:
-                    // <user_message>
-                    // ${message}
-                    // </user_message>
-                    // Provide a detailed and accurate response to the user's message based on the code context.
-                    // If suggesting code changes, explain the reasoning and ensure they follow best practices.
-                    //         `.trim();
+                    const userContent = `
+                    Here is the user's message:
+                    <user_message>
+                    ${message}
+                    </user_message>
+                    Provide a detailed and accurate response to the user's message based on the code context.
+                    If suggesting code changes, explain the reasoning and ensure they follow best practices.
+                            `.trim();
 
-                    // const payload = {
-                    //     model: SELECTED_MODEL,
-                    //     messages: [
-                    //         {role: 'system', content: systemContent },
-                    //         { role: 'user', content: userContent }
-                    //     ]
-                    // };
+                    const payload = {
+                        model: SELECTED_MODEL,
+                        messages: [
+                            {role: 'system', content: systemContent },
+                            { role: 'user', content: userContent }
+                        ]
+                    };
                     
-                    // console.log("Sending payload: ", payload);
+                    console.log("Testing payload: ", payload);
 
                     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                         method: 'POST',
@@ -883,7 +883,7 @@ $(document).ready(async function () {
     
                                                 Analyze the information carefully, step by step. Provide clear, concise and accurate responses about the code.
                                                 If suggesting code changes, explain the reasoning and ensure they follow best practices.
-                                                `
+                                                `.trim()
                                                 
                                 },
                                 {
@@ -893,8 +893,9 @@ $(document).ready(async function () {
                                     ${message}
                                     </user_message>
                                     
-                                    Provide a detailed and accurate response to the user's message based on the code context. If suggesting code changes, 
-                                    explain the reasoning and ensure they follow best practices. `
+                                    Provide a detailed and accurate response to the user's message as if you are replying direectly to them based on given code context. 
+                                    If suggesting code changes, explain the reasoning and ensure they follow best practices. 
+                                    If user's request is not related to mentioned code politely refuse to answer their questions, ensuring to only answer relevant questions.`
                                 }
                             ]
                         }) 
