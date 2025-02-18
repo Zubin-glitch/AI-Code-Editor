@@ -4,6 +4,14 @@ const AUTH_HEADERS = API_KEY ? {
     "Authorization": `Bearer ${API_KEY}`
 } : {};
 
+// OpenRouter API Configuration
+let OPENROUTER_API_KEY = localStorage.getItem('OPENROUTER_API_KEY') || '';
+
+function setOpenRouterApiKey(key) {
+    OPENROUTER_API_KEY = key;
+    localStorage.setItem('OPENROUTER_API_KEY', key);
+}
+
 const CE = "CE";
 const EXTRA_CE = "EXTRA_CE";
 
@@ -606,6 +614,21 @@ $(document).ready(async function () {
                         </svg>
                         Code Assistant
                     </h3>
+                    <div class="flex items-center gap-2">
+                        <input 
+                            type="password" 
+                            id="openrouter-api-key" 
+                            class="flex-1 bg-[#1e1e1e] text-[#cccccc] text-sm rounded border border-[#3e3e42] px-2 py-1 focus:outline-none focus:border-[#0078d4]" 
+                            placeholder="Enter OpenRouter API Key"
+                            value="${OPENROUTER_API_KEY}"
+                        />
+                        <button 
+                            id="save-api-key" 
+                            class="bg-[#0078d4] hover:bg-[#006bb3] text-white text-sm px-2 py-1 rounded transition-colors"
+                        >
+                            Save Key
+                        </button>
+                    </div>
                     <p class="chat-description text-sm text-[#8a8a8a]">
                     Ask questions about your code or get help with programming
                     </p>
@@ -614,14 +637,10 @@ $(document).ready(async function () {
             <div class="messages flex-1 overflow-y-auto p-4 space-y-4"> </div>
             <div class="chat-input-container border-t border-[#3e3e42] p-4 bg-[#252526]">
                 <div class="chat-input-wrapper flex gap-2">
-                    <textarea
-                        class="chat-input flex-1 bg-[#1e1e1e] text-[#cccccc] rounded-lg border border-[#3e3e42] p-3 focus:outline-none focus:border-[#0078d4] resize-none" rows="1" 
-                        placeholder="Ask about the code..."></textarea>
-                    <button class="send-btn bg-[#0078d4] hover:bg-[#006bb3] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                    title="Send message(Enter)">
+                    <textarea class="chat-input flex-1 bg-[#1e1e1e] text-[#cccccc] rounded-lg border border-[#3e3e42] p-3 focus:outline-none focus:border-[#0078d4] resize-none" rows="1" placeholder="Ask about the code..."></textarea>
+                    <button class="send-btn bg-[#0078d4] hover:bg-[#006bb3] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" title="Send message(Enter)">
                         <span>Send</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                         </svg>
                     </button>
                 </div>
@@ -649,6 +668,7 @@ $(document).ready(async function () {
             }
 
             function addUserMessage(message) {
+                console.log(message);
                 const messageHTML = `
                     <div class="message-wrapper user-message-wrapper flex justify-end">
                         <div class="message user-message bg-[#0078d4] text-[#ffffff] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]">
@@ -657,7 +677,7 @@ $(document).ready(async function () {
                         </div>
                     </div>
                 `
-                messagesEl.insertAdjacentElement('beforeend', messageHTML)
+                messagesEl.insertAdjacentHTML('beforeend', messageHTML)
                 messagesEl.scrollTop = messagesEl.scrollHeight
             }
             
@@ -686,7 +706,7 @@ $(document).ready(async function () {
                         </div>
                     </div>
                 `
-                messagesEl.insertAdjacentElement('beforeend', indicatorHTML)
+                messagesEl.insertAdjacentHTML('beforeend', indicatorHTML)
                 messagesEl.scrollTop = messagesEl.scrollHeight
             }
 
@@ -709,16 +729,82 @@ $(document).ready(async function () {
                 addUserMessage(message)
                 addTypingIndicator()
 
-                try{
-                    // Simulate an API call 
-                    setTimeout(() => {
-                        removeTypingIndicator()
-                        addAssistantMessage("This is a sample response. The actual integration with LLMs will be implemented here.")
-                    }, 1000)
-                } catch (error){
+                // try{
+                //     // Simulating an API call 
+                //     setTimeout(() => {
+                //         removeTypingIndicator()
+                //         addAssistantMessage("This is a sample response. The actual integration with LLMs is coming soon.")
+                //     }, 1000)
+                // } catch (error){
+                //     removeTypingIndicator()
+                //     addAssistantMessage("An error was encountered while processing your request. Refresh the page or try again later!")
+                // }
+
+                try {
+
+                    const codeContext = {
+                        source_code: sourceEditor.getValue(),
+                        language: $selectLanguage.find(":selected").text(),
+                        stdin: stdinEditor.getValue(),
+                        stdout: stdoutEditor.getValue(),
+                    }
+                    
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer  ${OPENROUTER_API_KEY}`,
+                            'HTTP-Referer': window.location.origin,
+                            'X-Title': 'Judge0-ide'
+                        },
+                        body: JSON.stringify({
+                            model: 'meta-llama/llama-3.2-3b-instruct:free',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: `You are an expert programmer. You have access to the following code context: 
+                                                Language: ${codeContext.language}
+                                                Source Code: 
+                                                \`\`\`
+                                                ${codeContext.source_code}
+                                                \`\`\`
+                                                ${codeContext.stdin ? `Input: \n${codeContext.stdin}\n` : ''}
+                                                ${codeContext.stdout ? `Output: \n${codeContext.stdout}\n` : ''}
+    
+                                                Analyze the information carefully, step by step. Provide clear, concise and accurate responses about the code.
+                                                If suggesting code changes, explain the reasoning and ensure they follow best practices.
+                                                `
+                                                
+                                },
+                                {
+                                    role: 'user',
+                                    content: `Here is the user's message: 
+                                    <user_message>
+                                    ${message}
+                                    </user_message>
+                                    
+                                    Provide a detailed and accurate response to the user's message based on the code context. If suggesting code changes, 
+                                    explain the reasoning and ensure they follow best practices. `
+                                }
+                            ]
+                        }) 
+                    })
+    
+                    if (!response.ok) {
+                        throw new Error(`API request failed: ${response.statusText}`)
+                    }
+                    const data = await response.json()
+                    const assistantMessage = data.choices[0].message.content
                     removeTypingIndicator()
-                    addAssistantMessage("An error was encountered while processing your request. Refresh the page or try again later!")
+                    addAssistantMessage(assistantMessage)
+
+                } catch (error) {
+                    console.error('Error encountered: ', error)
+                    removeTypingIndicator()
+                    addAssistantMessage("Sorry, there was an error processing your request. Please make sure you set up your OpenRouter API Key correctly.")
                 }
+
+
             }
 
             // Event listeners
@@ -729,6 +815,18 @@ $(document).ready(async function () {
                     sendMessage()
                 }
             })
+
+            // API Key Handling code
+            const apiKeyInput = chatContainer.querySelector("#openrouter-api-key")
+            const saveKeyBtn = chatContainer.querySelector("#save-api-key")
+
+            saveKeyBtn.addEventListener("click", () => {
+                const newKey = apiKeyInput.value.trim()
+                setOpenRouterApiKey(newKey)
+                addAssistantMessage("API key has been saved.")
+            })
+
+
             container.getElement().append(chatContainer)
 
         });
